@@ -1,0 +1,29 @@
+  body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: gray;
+  }
+  h1 {
+    font-size: 24px;
+    margin-bottom: 16px;
+  }
+  
+  * {
+    box-sizing: border-box;
+  }
+
+  button, input[type="text"] {
+    padding: 8px 16px;
+    font-size: 16px;
+    border-radius: 4px;
+    border: none;
+    margin-bottom: 16px;
+  }
+  @media only screen and (max-width: 600px) {
+    h1 {
+      font-size: 18px;
+    }
+    button, input[type="text"] {
+      font-size: 14px;
+    }
+  }

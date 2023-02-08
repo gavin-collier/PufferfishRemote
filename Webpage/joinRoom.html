@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>Joined Room</title>
+        <link rel="stylesheet" type="text/css" href="css/index.css">
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            var socket = io();
+            let roomID = document.cookie;
+            if (roomID == "null"){
+                window.location.href = "http://localhost:3000";
+            } 
+            else{
+                socket.emit("changeRoom", roomID);
+            }
+            document.cookie = null;
+            socket.on("newUserNotification", (uID) => {if (uID != socket.id) {window.alert("a new user has joined!");} });
+        </script>
+    </head>
+    <body>
+        <h1 id="title">Now in Room NILL</h1>
+        <script>           
+            document.getElementById("title").innerHTML = "Now in Room: " + roomID;
+        </script>
+    </body>
+</html>
