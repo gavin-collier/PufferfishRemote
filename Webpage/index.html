@@ -14,28 +14,30 @@
   </script>
 </head>
 <body>
-  <h1>Pufferfish Controler</h1>
-  <h2>Join or Create a Room</h2>
-  <br>
-  <button type="button" id="createRoom">Create New Room</button>
-  <script>
-    document.getElementById("createRoom").onclick = function() {;
-      //generate a random 6 digit code var named roomID and set it to the currend ID
-      let roomID = (Math.random()).toString(36).substring(2, 8);
-      roomID = roomID.toUpperCase(); 
-      document.cookie = roomID;
-      window.location.href = "http://localhost:3000/joinRoom";
-    }
-  </script>
-  <br><br>
-  <input name="roomCode" type="text" maxlength="6" id="roomCode">
-  <button type="button" id="joinRoom">Join Room</button>
-  <script>
-    document.getElementById("joinRoom").onclick = function() {;
-      let roomCode = document.getElementById("roomCode").value;
-      document.cookie = roomCode;
-      window.location.href = "http://localhost:3000/joinRoom";
-    }
-  </script>
+  <div class="center">
+    <h1>Pufferfish Controler</h1>
+    <h2>Join or Create a Room</h2>
+    <br>
+    <button type="button" id="createRoom">Create New Room</button>
+    <script>
+      document.getElementById("createRoom").onclick = function() {;
+        //generate a random 6 digit code var named roomID and set it to the currend ID
+        let roomID = (Math.random()).toString(36).substring(2, 8);
+        roomID = roomID.toUpperCase(); 
+        document.cookie = roomID;
+        window.location.href = "http://localhost:3000/joinRoom";
+      }
+    </script>
+    <br><br>
+    <input name="roomCode" type="text" maxlength="6" id="roomCode">
+    <button type="button" id="joinRoom">Join Room</button>
+    <script>
+      document.getElementById("joinRoom").onclick = function() {;
+        let roomCode = document.getElementById("roomCode").value;
+        document.cookie = roomCode;
+        window.location.href = "http://localhost:3000/joinRoom";
+      }
+    </script>
+  </div>
 </body>
 </html>
