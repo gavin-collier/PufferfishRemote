@@ -8,7 +8,7 @@
             var socket = io();
             let roomID = document.cookie;
             if (roomID == "null"){
-                window.location.href = "http://localhost:3000";
+                history.back();
             } 
             else{
                 socket.emit("changeRoom", roomID);
