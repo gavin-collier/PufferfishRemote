@@ -9,12 +9,23 @@
             let roomID = document.cookie;
             if (roomID == "null"){
                 history.back();
+                window.location.href = "/503";
             } 
             else{
-                socket.emit("changeRoom", roomID);
+                socket.emit("joinRoom", roomID, (response) => {
+                    if (response != "OK"){
+                        window.location.href = "/503";
+                    }
+                });
             }
             document.cookie = null;
-            socket.on("newUserNotification", (uID) => {if (uID != socket.id) {window.alert("a new user has joined!");} });
+            socket.on("newUserNotification", (uID) => {
+                if (uID != socket.id) {window.alert("a new user has joined!");}
+             });
+            socket.on("roomEnded", function(){
+                window.alert("The session was ended or the host was disconnected");
+                window.location.href = "/";
+            });
         </script>
     </head>
     <body>
