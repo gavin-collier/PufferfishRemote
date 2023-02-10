@@ -7,7 +7,7 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 import sys
 
-sio = socketio.Client()
+sio = socketio.client()
 sio.connect('http://localhost:8080') #chnage this to webapp after testing
 hosting = False
 
@@ -39,7 +39,7 @@ def new_room():
         newWindow.protocol("WM_DELETE_WINDOW", on_closing)
 
         # Add bg image file
-        bg2 = Image.open("Client/files/bg.png")
+        bg2 = Image.open("client/files/bg.png")
         resize_bg2 = bg2.resize((400,400))
         bg2 = ImageTk.PhotoImage(resize_bg)
         bg_label2 = tk.Label(newWindow, image = bg)
@@ -65,14 +65,14 @@ root.geometry("400x400")
 root.protocol("WM_DELETE_WINDOW", on_closing)
 root.title("Pufferfish")
 # logo photo
-icon = tk.PhotoImage(file = 'Client/files/pufferfish.png')
+icon = tk.PhotoImage(file = 'client/files/pufferfish.png')
 root.iconphoto = (True, icon)
 root.resizable(False, False) 
 root.configure(bg="#333")
 
 
 # Add bg image file
-bg = Image.open("Client/files/bg.png")
+bg = Image.open("client/files/bg.png")
 resize_bg = bg.resize((400,400))
 bg = ImageTk.PhotoImage(resize_bg)
 bg_label = tk.Label(root, image = bg)
@@ -84,7 +84,7 @@ tk.Label(
     fg="white",
     font=("Oswald", 25)).grid(row = 0, column = 0, pady=20, padx=(60, 0))
 # The logo
-image = Image.open("Client/files/pufferfish.png")
+image = Image.open("client/files/pufferfish.png")
 resize_image = image.resize((50, 50))
 img = ImageTk.PhotoImage(resize_image)
 logo_label = tk.Label(image=img)
@@ -94,7 +94,7 @@ logo_label.grid(row = 0, column = 1, padx=20)
 create_room_button = tk.Button(root, text="Create Room", command=new_room, bg="#555", fg="#fff", width=20, height=2)
 create_room_button.place(relx = 0.5, rely = 0.35, anchor="center")
 
-github_img_resize = Image.open("Client/files/github.png")
+github_img_resize = Image.open("client/files/github.png")
 github_img_resize = github_img_resize.resize((15, 15))
 github_img = ImageTk.PhotoImage(github_img_resize)
 github_button = tk.Button(root, image=github_img, command=open_github, bg="#555", fg="#fff", width=15, height=15)
