@@ -1,9 +1,0 @@
-{
-    "grammarly.selectors": [
-        {
-            "language": "html",
-            "scheme": "file"
-        }
-    ],
-    "java.configuration.updateBuildConfiguration": "interactive"
-}
