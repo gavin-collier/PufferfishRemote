@@ -11,35 +11,48 @@ import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
-import javafx.stage.Stage;
+
+
+class UpdateObjects implements Runnable{
+    public void run() {
+
+    }
+}
 
 public class FXMLController implements Initializable {
 
     String roomCode;
+
     static connectionHandler connectionHandler = new connectionHandler();
 
     @FXML
-    private ListView<String> playerList;
+    public static ListView<String> playerList;
 
     @FXML
     private Label roomCodeLabel, roomCodeTextLabel;
 
     @FXML
-    private void handleButtonAction(ActionEvent event) {
+    synchronized private void handleButtonAction(ActionEvent event) throws InterruptedException {
+       roomCode = generateRandomString(6);
+       
+        while (connectionHandler.createRoom(roomCode)) {
+            roomCode = generateRandomString(6);
+            wait(500);
+        }
+
         roomCodeLabel.setDisable(false);
         roomCodeTextLabel.setDisable(false);
-
-        roomCode = generateRandomString(6);
         roomCodeLabel.setText(roomCode);
     }
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         try {
-            connectionHandler.newConnection(new URI("ws://localhost:8080"));
+            connectionHandler.newConnection(new URI("https://pufferfish.onrender.com"));
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
+        new Thread(new UpdateObjects()).start();
     }
 
     public static String generateRandomString(int length) {
@@ -56,3 +69,4 @@ public class FXMLController implements Initializable {
         connectionHandler.endConnection();
     }
 }
+

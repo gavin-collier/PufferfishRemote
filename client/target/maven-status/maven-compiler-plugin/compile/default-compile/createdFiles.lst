@@ -1,4 +1,10 @@
+com\pufferfish\UpdateObjects.class
+com\pufferfish\controllerManager.class
+com\pufferfish\connectionHandler.class
+com\pufferfish\controller.class
+com\pufferfish\FXMLController.class
+com\pufferfish\connectionHandler$3.class
 module-info.class
 com\pufferfish\MainApp.class
-com\pufferfish\connectionHandler.class
-com\pufferfish\FXMLController.class
+com\pufferfish\connectionHandler$2.class
+com\pufferfish\connectionHandler$1.class

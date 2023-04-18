@@ -20,12 +20,12 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
-            <version>11</version>
+            <version>21-ea+5</version>
         </dependency>
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-media</artifactId>
-            <version>11</version>
+            <version>21-ea+5</version>
         </dependency>
         <dependency>
             <groupId>io.socket</groupId>
@@ -37,6 +37,11 @@
             <artifactId>engine.io-client</artifactId>
             <version>2.1.0</version>
         </dependency>
+        <dependency>
+            <groupId>io.ultreia</groupId>
+            <artifactId>bluecove</artifactId>
+            <version>2.1.1</version>
+        </dependency>      
     </dependencies>
 
     <build>
@@ -67,7 +72,7 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.0</version>
                 <configuration>
-                    <release>11</release>
+                    <release>18</release>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -92,7 +97,8 @@
                 </configuration>
             </plugin>
 
-            <!-- Makes the jLink setup so you can give it to your friends  -->
+
+            <!-- Makes the jLink setup so you can give it to your friends  
             <plugin>
                 <groupId>org.moditect</groupId>
                 <artifactId>moditect-maven-plugin</artifactId>
@@ -121,7 +127,35 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin> 
+        
+                    <plugin>
+                <groupId>org.moditect</groupId>
+                <artifactId>moditect-maven-plugin</artifactId>
+                <version>1.0.0.RC2</version>
+                <executions>
+                    <execution>
+                        <id>add-module-infos</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>add-module-info</goal>
+                        </goals>
+                        <configuration>
+                            <jvmVersion>11</jvmVersion>
+                            <module>
+                                <moduleInfo>
+                                    <name>io.ok</name>
+                                    <exports>
+                                        !io.ok.internal.*;
+                                        *;
+                                    </exports>
+                                </moduleInfo>
+                            </module>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
+        -->
 
             <!-- Copies the depend FX files to your program  -->
             <plugin>

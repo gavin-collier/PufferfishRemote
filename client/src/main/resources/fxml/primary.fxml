@@ -40,7 +40,7 @@
             <Font name="Berlin Sans FB Demi Bold" size="33.0" />
          </font>
       </Label>
-      <Label fx:id="roomCodeLabel" disable="true" layoutX="123.0" layoutY="403.0" prefHeight="48.0" prefWidth="135.0" textFill="WHITE" wrapText="true">
+      <Label fx:id="roomCodeLabel" disable="true" layoutX="92.0" layoutY="403.0" prefHeight="48.0" prefWidth="135.0" textFill="WHITE" wrapText="true">
          <font>
             <Font name="Berlin Sans FB Demi Bold" size="33.0" />
          </font>
