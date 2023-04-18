@@ -14,8 +14,8 @@ function removeItemOnce(arr, value) {
   return arr;
 }
 
-rooms = []; //create the list of open rooms
-roomHosts = []
+let rooms = []; //create the list of open rooms
+let roomHosts = []
 
 app.use(express.static("public"));
 
@@ -99,6 +99,10 @@ io.on("connection", (socket) => {
         callback({ error: error.message });
       }
     }
+  });
+  socket.on("pressButton", (button) => {
+    console.log("button pressed: " + button);
+    socket.in(rooms[roomHosts.indexOf(socket.id)]).emit("buttonPressed", socket.id, button);
   });
 });
 

@@ -37,7 +37,8 @@
         <button type="button" id="wiiRemote">Start Wii Remote</button>
         <script>
             document.getElementById("wiiRemote").onclick = function() {;
-                
+                let button = 1;
+                socket.emit("pressButton", button);
             }
           </script>
     </body>
