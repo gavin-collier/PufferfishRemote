@@ -58,10 +58,15 @@ io.on("connection", (socket) => {
     console.log("a user disconnected");
   });
   socket.on("createRoom", (room) => {
+    if (roomHosts.includes(socket.id)){
+      rooms = removeItemOnce(rooms, rooms[roomHosts.indexOf(socket.id)]) //remove the room from the room list
+      console.log("reaming rooms: " + rooms)
+      roomHosts = removeItemOnce(roomHosts, socket.id); //remove the host from the host list
+    }
     socket.leaveAll();
     rooms.push(room) //add the room into the list of active rooms
     roomHosts.splice(rooms.indexOf(room), 0, socket.id); //mark the cliant that made the room as the host
-    console.log("a user[" + socket.id + "] created a room: " + room);
+    console.log("a host[" + socket.id + "] created a room: " + room);
     socket.join(room);
   })
   socket.on("checkRoom", (room, callback) => {
@@ -101,8 +106,9 @@ io.on("connection", (socket) => {
     }
   });
   socket.on("pressButton", (button) => {
-    console.log("button pressed: " + button);
-    socket.in(rooms[roomHosts.indexOf(socket.id)]).emit("buttonPressed", socket.id, button);
+    let room = [...socket.rooms][0];
+    console.log("button pressed: " + button + " in room: " + room);
+    socket.to(room).emit("buttonPressed", socket.id, button);
   });
 });
 

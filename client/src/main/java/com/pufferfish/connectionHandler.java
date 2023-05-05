@@ -27,7 +27,7 @@ public class connectionHandler {
             .setForceNew(true)
             .build();
 
-    public static List players = new ArrayList<controllerManager>();
+    public static ArrayList<controllerManager> players = new ArrayList<controllerManager>();
     boolean roomEmpty = false;
 
     public void endConnection() {
@@ -55,19 +55,24 @@ public class connectionHandler {
 
         });
 
-        socket.once("newUserNotification", new Emitter.Listener() {
+        socket.on("newUserNotification", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-               players.add(new controllerManager(socket, players.size() + 1));
+                players.add(new controllerManager((String) args[0]));
             }
         });
 
-        socket.once("buttonPressed", new Emitter.Listener() {
+        socket.on("buttonPressed", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
+                System.out.println("Button pressed event");
                 for (int i = 0; i < players.size(); i++) {
-                    if (((controllerManager) players.get(i)).getSocket().id() == (String) args[0]) {
+                    System.out.println("Checking player " + i);
+                    System.out.println("Checking player id " + ((controllerManager) players.get(i)).getSocket());
+                    System.out.println("Checking socket id " + (String) args[0]);
+                    if (((controllerManager) players.get(i)).getSocket().equals((String) args[0])) {
                         try {
+                            System.out.println("Sending button press to player " + i);
                             ((controllerManager) players.get(i)).pressButton((int) args[1]);
                         } catch (IOException e) {
                             e.printStackTrace();

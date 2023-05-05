@@ -2,28 +2,22 @@ package com.pufferfish;
 
 import java.io.IOException;
 
-import io.socket.client.Socket;
-
 public class controllerManager {
-    private static Socket socket;
+    private String id;
     public static int playerNumber;
     Controller controller;
 
-    public controllerManager(Socket socket, int playerNumber) {
-        this.socket = socket;
-        this.playerNumber = playerNumber;
-        try {
-            controller  = new Controller();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public controllerManager(String id) {
+        this.id = id;
+        playerNumber++;
+        controller = new Controller();
     }
 
     public void pressButton(int button) throws IOException{
-        controller.sendButton(button);
+        System.out.println("Sending button by " + playerNumber + " button: " + button);
     }
 
-    public Socket getSocket() {
-        return socket;
+    public String getSocket() {
+        return id;
     }
 }

@@ -48,7 +48,7 @@ public class FXMLController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         try {
-            connectionHandler.newConnection(new URI("https://pufferfish.onrender.com"));
+            connectionHandler.newConnection(new URI("ws://localhost:8080")); //https://pufferfish.onrender.com
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }

@@ -1,7 +1,8 @@
 com\pufferfish\UpdateObjects.class
 com\pufferfish\controllerManager.class
 com\pufferfish\connectionHandler.class
-com\pufferfish\controller.class
+com\pufferfish\connectionHandler$4.class
+com\pufferfish\Controller.class
 com\pufferfish\FXMLController.class
 com\pufferfish\connectionHandler$3.class
 module-info.class
