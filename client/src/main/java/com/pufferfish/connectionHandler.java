@@ -27,7 +27,7 @@ public class connectionHandler {
             .setForceNew(true)
             .build();
 
-    public static ArrayList<controllerManager> players = new ArrayList<controllerManager>();
+    public static controllerManager controllerManager = new controllerManager();
     boolean roomEmpty = false;
 
     public void endConnection() {
@@ -58,7 +58,7 @@ public class connectionHandler {
         socket.on("newUserNotification", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                players.add(new controllerManager((String) args[0]));
+                controllerManager.addPlayer(-1, new Controller((String) args[0]));
             }
         });
 
@@ -66,17 +66,13 @@ public class connectionHandler {
             @Override
             public void call(Object... args) {
                 System.out.println("Button pressed event");
-                for (int i = 0; i < players.size(); i++) {
+                for (int i = 0; i < controllerManager.players.size(); i++) {
                     System.out.println("Checking player " + i);
-                    System.out.println("Checking player id " + ((controllerManager) players.get(i)).getSocket());
+                    System.out.println("Checking player id " + (controllerManager.getSocket(i)));
                     System.out.println("Checking socket id " + (String) args[0]);
-                    if (((controllerManager) players.get(i)).getSocket().equals((String) args[0])) {
-                        try {
-                            System.out.println("Sending button press to player " + i);
-                            ((controllerManager) players.get(i)).pressButton((int) args[1]);
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                    if (controllerManager.getPlayer(i).getSocket().equals((String) args[0])) {
+                        System.out.println("Sending button press to player " + i);
+                        controllerManager.getPlayer(i).pressButton((int) args[1]);
                     }
                 
                 }

@@ -1,23 +1,26 @@
 package com.pufferfish;
 
-import java.io.IOException;
+import java.util.ArrayList;
 
 public class controllerManager {
-    private String id;
-    public static int playerNumber;
-    Controller controller;
+    public static ArrayList<Controller> players = new ArrayList<Controller>();
 
-    public controllerManager(String id) {
-        this.id = id;
-        playerNumber++;
-        controller = new Controller();
+    public controllerManager() {
     }
 
-    public void pressButton(int button) throws IOException{
-        System.out.println("Sending button by " + playerNumber + " button: " + button);
+    public void addPlayer(int index, Controller player) {
+        if (index != -1) {
+            players.add(index, player);
+        } else {
+            players.add(player);
+        }
     }
 
-    public String getSocket() {
-        return id;
+    public Controller getPlayer(int playerNum){
+        return players.get(playerNum);
+    }
+
+    public String getSocket(int playerNum) {
+        return players.get(playerNum).getSocket();
     }
 }
