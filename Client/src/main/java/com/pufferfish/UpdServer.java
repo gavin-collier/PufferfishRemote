@@ -14,15 +14,30 @@ public class UpdServer {
     private int serverId;
     private boolean isRunning;
     private byte[] receiveBuffer = new byte[1024];
+    private controllerManager controllerManager;
 
     enum MessageType {
         DSUC_VersionReq(0x100000),
         DSUS_VersionRsp(0x100000),
         DSUC_ListPorts(0x100001),
-        DSUS_PortInfo = (0x100001),
-        DSUC_PadDataReq = 0x100002,
-        DSUS_PadDataRsp = 0x100002,
-    };
+        DSUS_PortInfo(0x100001),
+        DSUC_PadDataReq(0x100002),
+        DSUS_PadDataRsp(0x100002);
+
+        private final int value;
+
+        MessageType(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
+
+    public UpdServer(controllerManager controllerManager) {
+        this.controllerManager = controllerManager;
+    }
 
     private void SendPacket(InetSocketAddress clientEP, byte[] sendBuffer, short ProtocallVersion) {
         byte[] packetData = new byte[sendBuffer.length + 16];
@@ -83,17 +98,64 @@ public class UpdServer {
             if (crcCalc != crcValue) {
                 return;
             }
-            
+
             int clientID = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
             currentIdx += 4;
 
             int messageType = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
             currentIdx += 4;
 
-            if (messageType = (int) MessageType.DSUC_VersionReq){
+            if (messageType == MessageType.DSUC_VersionReq.getValue()) {
+                byte[] outputData = new byte[8];
+                int outIdx = 0;
+                ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(MessageType.DSUS_VersionRsp.getValue());
+                System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
+                outIdx += 4;
+                short MaxProtocolVersion = 1001;
+                ByteBuffer maxProtocolVersionBytes = ByteBuffer.allocate(2).putShort(MaxProtocolVersion);
+                System.arraycopy(maxProtocolVersionBytes.array(), 0, outputData, outIdx, 2);
 
+                outIdx += 2;
+                outputData[outIdx++] = 0;
+                outputData[outIdx++] = 0;
+
+                SendPacket(clientEP, outputData, (short) 1001);
+            } else if (messageType == MessageType.DSUC_ListPorts.getValue()) {
+                int numPadRequest = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
+                currentIdx += 4;
+                if (numPadRequest < 0 || numPadRequest > 4) {
+                    return;
+                }
+
+                int requestIdx = currentIdx;
+
+                for (int i = 0; i < numPadRequest; i++) {
+                    byte currentRequest = msg[requestIdx + i];
+                    if (currentRequest < 0 || currentRequest > 4) {
+                        return;
+                    }
+                }
+
+                byte[] outputData = new byte[16];
+                for (byte i = 0; i < numPadRequest; i++) {
+                    byte currentRequest = msg[requestIdx + i];
+                    Controller controller = controllerManager.getPlayer(i);
+
+                    int outIdx = 0;
+
+                    ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(MessageType.DSUS_VersionRsp.getValue());
+                    System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
+                    outIdx += 4;
+
+                    outputData[outIdx++] = (byte) controller.PadId;
+                    outputData[outIdx++] = (byte) controller.constants;
+                    outputData[outIdx++] = (byte) controller.model;
+                    outputData[outIdx++] = (byte) controller.connection;
+
+                    
+
+                }
             }
-
 
         } catch (Exception e) {
             // TODO: handle exception
