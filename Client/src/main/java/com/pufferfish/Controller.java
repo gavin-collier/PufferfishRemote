@@ -5,7 +5,9 @@ public class Controller {
     int PadId;
     int constants;
     int model;
+    int battery;
     int connection;
+    byte PadMacAdress[];
 
     public Controller(String id) {
         this.id = id;

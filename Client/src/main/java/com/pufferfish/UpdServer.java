@@ -5,7 +5,10 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.zip.CRC32;
 
 public class UpdServer {
@@ -34,6 +37,82 @@ public class UpdServer {
             return value;
         }
     }
+
+    class PhysicalAddress {
+        byte[] mac;
+        byte[] ip;
+        byte[] port;
+
+        public PhysicalAddress(byte[] ip) {
+            this.ip = ip;
+        }
+
+        public PhysicalAddress() {
+            this.ip = null;
+        }
+
+        public byte[] getMac() {
+            return mac;
+        }
+
+        public byte[] getIp() {
+            return ip;
+        }
+
+        public byte[] getPort() {
+            return port;
+        }
+
+    }
+
+    class ClientRequestTimes {
+        LocalDateTime allPads;
+        LocalDateTime[] padIds;
+        HashMap<PhysicalAddress, LocalDateTime> padMacs;
+
+        public LocalDateTime getAllPadsTime() {
+            return allPads;
+        }
+
+        public LocalDateTime[] getPadIdsTime() {
+            return padIds;
+        }
+
+        public HashMap<PhysicalAddress, LocalDateTime> getPadMacsTime() {
+            return padMacs;
+        }
+
+        public ClientRequestTimes() {
+            allPads = LocalDateTime.MIN;
+            padIds = new LocalDateTime[4];
+
+            for (int i = 0; i < padIds.length; i++) {
+                padIds[i] = LocalDateTime.MIN;
+            }
+
+            padMacs = new HashMap<PhysicalAddress, LocalDateTime>();
+        }
+
+        public void requestPadInfo(byte regFlags, byte idToReg, PhysicalAddress macToReg) {
+            LocalDateTime currentTime = LocalDateTime.now();
+
+            if (regFlags == 0) {
+                allPads = currentTime;
+            } else {
+                if ((regFlags & 0x01) != 0) { // id valid
+                    if (idToReg < padIds.length) {
+                        padIds[idToReg] = currentTime;
+                    }
+                }
+                if ((regFlags & 0x02) != 0) { // mac valid
+                    padMacs.put(macToReg, currentTime);
+                }
+            }
+        }
+
+    }
+
+    public Map<InetSocketAddress, ClientRequestTimes> clients = new HashMap<>();
 
     public UpdServer(controllerManager controllerManager) {
         this.controllerManager = controllerManager;
@@ -152,14 +231,53 @@ public class UpdServer {
                     outputData[outIdx++] = (byte) controller.model;
                     outputData[outIdx++] = (byte) controller.connection;
 
-                    
+                    byte[] adressByte = controller.PadMacAdress;
 
+                    if (adressByte.length == 6) {
+                        for (int j = 0; j < 6; j++) {
+                            outputData[outIdx++] = adressByte[j];
+                        }
+                    } else {
+                        for (int j = 0; j < 6; j++) {
+                            outputData[outIdx++] = 0;
+                        }
+                    }
+
+                    outputData[outIdx++] = (byte) controller.battery;
+                    outputData[outIdx++] = 0;
+
+                    SendPacket(clientEP, outputData, (short) 1001);
                 }
+            } else if (messageType == MessageType.DSUS_PadDataRsp.getValue()) {
+                byte regFlags = msg[currentIdx++];
+                byte idToReg = msg[currentIdx++];
+                PhysicalAddress macToReg = null;
+
+                byte[] macBytes = new byte[6];
+                System.arraycopy(msg, currentIdx, macBytes, 0, macBytes.length);
+                currentIdx += macBytes.length;
+                macToReg = new PhysicalAddress(macBytes);
+
+                synchronized (clients) {
+                    if (clients.containsKey(clientEP)) {
+                        clients.get(clientEP).requestPadInfo(regFlags, idToReg, macToReg);
+                    } else {
+                        ClientRequestTimes clientTimes = new ClientRequestTimes();
+                        clientTimes.requestPadInfo(regFlags, idToReg, macToReg);
+                        clients.put(clientEP, clientTimes);
+                    }
+                }
+
             }
 
         } catch (Exception e) {
             // TODO: handle exception
         }
+    }
+
+    private void ReceiveCallbakc(AsyncResult ar){
+        
+
     }
 
     private int BeginPacket(byte[] packetBuffer, short ProtocallVersion) {
