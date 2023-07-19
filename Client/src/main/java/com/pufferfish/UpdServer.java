@@ -2,6 +2,7 @@ package com.pufferfish;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
@@ -13,7 +14,7 @@ import java.util.zip.CRC32;
 
 public class UpdServer {
 
-    private Socket udpSocket;
+    DatagramSocket udpSocket;
     private int serverId;
     private boolean isRunning;
     private byte[] receiveBuffer = new byte[1024];
@@ -120,16 +121,13 @@ public class UpdServer {
 
     private void SendPacket(InetSocketAddress clientEP, byte[] sendBuffer, short ProtocallVersion) {
         byte[] packetData = new byte[sendBuffer.length + 16];
-        int currIdx = BeginPacket(packetData, ProtocallVersion);
-        System.arraycopy(sendBuffer, 0, packetData, currIdx, sendBuffer.length);
-        FinishPacket(packetData);
-
+        packetData = BeginPacket(packetData, ProtocallVersion);
+        System.arraycopy(sendBuffer, 0, packetData, 16, sendBuffer.length);
+        packetData = FinishPacket(packetData);
         try {
-            DatagramSocket udpSock = new DatagramSocket();
             DatagramPacket packet = new DatagramPacket(packetData, packetData.length, clientEP.getAddress(),
                     clientEP.getPort());
-            udpSock.send(packet);
-            udpSock.close();
+            udpSocket.send(packet);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -258,6 +256,7 @@ public class UpdServer {
                 currentIdx += macBytes.length;
                 macToReg = new PhysicalAddress(macBytes);
 
+                // this is junkey and I need to check to make shure it dose what I think it dose
                 synchronized (clients) {
                     if (clients.containsKey(clientEP)) {
                         clients.get(clientEP).requestPadInfo(regFlags, idToReg, macToReg);
@@ -275,12 +274,11 @@ public class UpdServer {
         }
     }
 
-    private void ReceiveCallbakc(AsyncResult ar){
-        
-
+    private void ReceiveCallback() {
+        byte[] msg = null;
     }
 
-    private int BeginPacket(byte[] packetBuffer, short ProtocallVersion) {
+    private byte[] BeginPacket(byte[] packetBuffer, short ProtocallVersion) {
         int currentIdx = 0;
         packetBuffer[currentIdx++] = (byte) 'D';
         packetBuffer[currentIdx++] = (byte) 'S';
@@ -302,10 +300,10 @@ public class UpdServer {
         System.arraycopy(serverIdBytes.array(), 0, packetBuffer, currentIdx, 4);
         currentIdx += 4;
 
-        return currentIdx;
+        return packetBuffer;
     }
 
-    private void FinishPacket(byte[] packetBufer) {
+    private byte[] FinishPacket(byte[] packetBufer) {
         Arrays.fill(packetBufer, 8, 12, (byte) 0); // clear the bytes at index 8 to 11
 
         CRC32 crc32 = new CRC32();
@@ -314,5 +312,7 @@ public class UpdServer {
 
         ByteBuffer crcBytes = ByteBuffer.allocate(4).putInt((int) crcCalc);
         System.arraycopy(crcBytes.array(), 0, packetBufer, 8, 4);
+
+        return packetBufer;
     }
 }

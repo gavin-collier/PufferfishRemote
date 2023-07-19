@@ -41,7 +41,7 @@
             <groupId>io.ultreia</groupId>
             <artifactId>bluecove</artifactId>
             <version>2.1.1</version>
-        </dependency>
+        </dependency>     
     </dependencies>
 
     <build>
