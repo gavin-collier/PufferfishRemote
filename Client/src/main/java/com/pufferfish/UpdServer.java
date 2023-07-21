@@ -1,19 +1,23 @@
 package com.pufferfish;
 
+import io.socket.client.IO;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.zip.CRC32;
 
 public class UpdServer {
-
     DatagramSocket udpSocket;
     private int serverId;
     private boolean isRunning;
@@ -63,7 +67,6 @@ public class UpdServer {
         public byte[] getPort() {
             return port;
         }
-
     }
 
     class ClientRequestTimes {
@@ -94,7 +97,8 @@ public class UpdServer {
             padMacs = new HashMap<PhysicalAddress, LocalDateTime>();
         }
 
-        public void requestPadInfo(byte regFlags, byte idToReg, PhysicalAddress macToReg) {
+        public void requestPadInfo(
+                byte regFlags, byte idToReg, PhysicalAddress macToReg) {
             LocalDateTime currentTime = LocalDateTime.now();
 
             if (regFlags == 0) {
@@ -110,7 +114,6 @@ public class UpdServer {
                 }
             }
         }
-
     }
 
     public Map<InetSocketAddress, ClientRequestTimes> clients = new HashMap<>();
@@ -119,14 +122,50 @@ public class UpdServer {
         this.controllerManager = controllerManager;
     }
 
-    private void SendPacket(InetSocketAddress clientEP, byte[] sendBuffer, short ProtocallVersion) {
+    public void Start(InetAddress ip) {
+        if (isRunning) {
+            if (udpSocket != null) {
+                udpSocket.close();
+                udpSocket = null;
+            }
+            isRunning = false;
+        }
+
+        try {
+            udpSocket = new DatagramSocket();
+            udpSocket.bind(new InetSocketAddress(ip, 26760));
+        } catch (SocketException e) {
+            udpSocket.close();
+            udpSocket = null;
+
+            System.out.println("Could not start UDP Server");
+            return;
+        }
+
+        byte[] randomBuf = new byte[4];
+        new Random().nextBytes(randomBuf);
+        serverId = ByteBuffer.wrap(randomBuf, 0, 4).getInt();
+
+        isRunning = true;
+        System.out.printf("Starting server on %s:%d\r\n", ip.toString(), 26760);
+        StartRecive();
+    }
+
+    public void Stop() {
+        isRunning = false;
+        udpSocket.close();
+        udpSocket = null;
+    }
+
+    private void SendPacket(
+            InetSocketAddress clientEP, byte[] sendBuffer, short ProtocallVersion) {
         byte[] packetData = new byte[sendBuffer.length + 16];
         packetData = BeginPacket(packetData, ProtocallVersion);
         System.arraycopy(sendBuffer, 0, packetData, 16, sendBuffer.length);
         packetData = FinishPacket(packetData);
         try {
-            DatagramPacket packet = new DatagramPacket(packetData, packetData.length, clientEP.getAddress(),
-                    clientEP.getPort());
+            DatagramPacket packet = new DatagramPacket(packetData, packetData.length,
+                    clientEP.getAddress(), clientEP.getPort());
             udpSocket.send(packet);
         } catch (Exception e) {
             e.printStackTrace();
@@ -185,12 +224,14 @@ public class UpdServer {
             if (messageType == MessageType.DSUC_VersionReq.getValue()) {
                 byte[] outputData = new byte[8];
                 int outIdx = 0;
-                ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(MessageType.DSUS_VersionRsp.getValue());
+                ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(
+                        MessageType.DSUS_VersionRsp.getValue());
                 System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
                 outIdx += 4;
                 short MaxProtocolVersion = 1001;
                 ByteBuffer maxProtocolVersionBytes = ByteBuffer.allocate(2).putShort(MaxProtocolVersion);
-                System.arraycopy(maxProtocolVersionBytes.array(), 0, outputData, outIdx, 2);
+                System.arraycopy(
+                        maxProtocolVersionBytes.array(), 0, outputData, outIdx, 2);
 
                 outIdx += 2;
                 outputData[outIdx++] = 0;
@@ -220,7 +261,8 @@ public class UpdServer {
 
                     int outIdx = 0;
 
-                    ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(MessageType.DSUS_VersionRsp.getValue());
+                    ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(
+                            MessageType.DSUS_VersionRsp.getValue());
                     System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
                     outIdx += 4;
 
@@ -256,7 +298,8 @@ public class UpdServer {
                 currentIdx += macBytes.length;
                 macToReg = new PhysicalAddress(macBytes);
 
-                // this is junkey and I need to check to make shure it dose what I think it dose
+                // this is junkey and I need to check to make shure it dose what I think
+                // it dose
                 synchronized (clients) {
                     if (clients.containsKey(clientEP)) {
                         clients.get(clientEP).requestPadInfo(regFlags, idToReg, macToReg);
@@ -266,7 +309,6 @@ public class UpdServer {
                         clients.put(clientEP, clientTimes);
                     }
                 }
-
             }
 
         } catch (Exception e) {
@@ -274,8 +316,45 @@ public class UpdServer {
         }
     }
 
-    private void ReceiveCallback() {
+    private boolean ReportToOutputBuffer(Controller controller, byte[] outputData, int outIdx) {
+        
+
+        return true;
+    }
+
+    private void ReceiveCallback(DatagramSocket socket) {
         byte[] msg = null;
+        InetSocketAddress clientEP = (InetSocketAddress) socket.getRemoteSocketAddress();
+        try {
+            int msgLen = socket.getReceiveBufferSize();
+            msg = new byte[msgLen];
+            System.arraycopy(receiveBuffer, msgLen, msg, 0, msgLen);
+        } catch (Exception e) {
+        }
+
+        StartRecive();
+
+        if (msg != null) {
+            ProcessIncomingPacket(msg, clientEP);
+        }
+    }
+
+    private void StartRecive() {
+        try {
+            InetAddress localHostEP = InetAddress.getLocalHost();
+            DatagramPacket packet = new DatagramPacket(
+                    receiveBuffer, receiveBuffer.length, localHostEP, 26760);
+            udpSocket.receive(packet);
+            ReceiveCallback(udpSocket);
+        } catch (IOException e) {
+            try {
+                udpSocket.setOption(StandardSocketOptions.SO_BROADCAST, false);
+                udpSocket.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, false);
+            } catch (IOException e1) {
+                e1.printStackTrace();
+            }
+            StartRecive();
+        }
     }
 
     private byte[] BeginPacket(byte[] packetBuffer, short ProtocallVersion) {
@@ -286,11 +365,13 @@ public class UpdServer {
         packetBuffer[currentIdx++] = (byte) 'S';
 
         ByteBuffer reqProtocolVersionBytes = ByteBuffer.allocate(2).putShort(ProtocallVersion);
-        System.arraycopy(reqProtocolVersionBytes.array(), 0, packetBuffer, currentIdx, 2);
+        System.arraycopy(
+                reqProtocolVersionBytes.array(), 0, packetBuffer, currentIdx, 2);
         currentIdx += 2;
 
         ByteBuffer packetLengthBytes = ByteBuffer.allocate(2).putShort((short) (packetBuffer.length - 16));
-        System.arraycopy(packetLengthBytes.array(), 0, packetBuffer, currentIdx, 2);
+        System.arraycopy(
+                packetLengthBytes.array(), 0, packetBuffer, currentIdx, 2);
         currentIdx += 2;
 
         Arrays.fill(packetBuffer, currentIdx, currentIdx + 4, (byte) 0);
@@ -304,7 +385,8 @@ public class UpdServer {
     }
 
     private byte[] FinishPacket(byte[] packetBufer) {
-        Arrays.fill(packetBufer, 8, 12, (byte) 0); // clear the bytes at index 8 to 11
+        Arrays.fill(
+                packetBufer, 8, 12, (byte) 0); // clear the bytes at index 8 to 11
 
         CRC32 crc32 = new CRC32();
         crc32.update(packetBufer);
