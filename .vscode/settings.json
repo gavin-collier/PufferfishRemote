@@ -5,5 +5,11 @@
             "scheme": "file"
         }
     ],
-    "java.configuration.updateBuildConfiguration": "automatic"
+    "java.configuration.updateBuildConfiguration": "automatic",
+    "cSpell.words": [
+        "DSUC",
+        "DSUS",
+        "Protocal",
+        "pufferfish"
+    ]
 }

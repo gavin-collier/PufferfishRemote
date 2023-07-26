@@ -72,7 +72,7 @@ public class connectionHandler {
                     System.out.println("Checking socket id " + (String) args[0]);
                     if (controllerManager.getPlayer(i).getSocket().equals((String) args[0])) {
                         System.out.println("Sending button press to player " + i);
-                        controllerManager.getPlayer(i).pressButton((int) args[1]);
+                        controllerManager.getPlayer(i).updateState((boolean[]) args[1]);
                     }
                 
                 }

@@ -17,7 +17,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.zip.CRC32;
 
-public class UpdServer {
+public class UDPServer {
     DatagramSocket udpSocket;
     private int serverId;
     private boolean isRunning;
@@ -118,7 +118,7 @@ public class UpdServer {
 
     public Map<InetSocketAddress, ClientRequestTimes> clients = new HashMap<>();
 
-    public UpdServer(controllerManager controllerManager) {
+    public UDPServer(controllerManager controllerManager) {
         this.controllerManager = controllerManager;
     }
 
@@ -148,7 +148,7 @@ public class UpdServer {
 
         isRunning = true;
         System.out.printf("Starting server on %s:%d\r\n", ip.toString(), 26760);
-        StartRecive();
+        StartReceive();
     }
 
     public void Stop() {
@@ -157,18 +157,19 @@ public class UpdServer {
         udpSocket = null;
     }
 
-    private void SendPacket(
-            InetSocketAddress clientEP, byte[] sendBuffer, short ProtocallVersion) {
+    private void SendPacket(InetSocketAddress clientEP, byte[] sendBuffer, short ProtocolVersion) {
         byte[] packetData = new byte[sendBuffer.length + 16];
-        packetData = BeginPacket(packetData, ProtocallVersion);
+        packetData = BeginPacket(packetData, ProtocolVersion);
         System.arraycopy(sendBuffer, 0, packetData, 16, sendBuffer.length);
         packetData = FinishPacket(packetData);
         try {
-            DatagramPacket packet = new DatagramPacket(packetData, packetData.length,
-                    clientEP.getAddress(), clientEP.getPort());
+            System.out.printf("Sending packet to %s:%d\r\n", clientEP.getAddress().toString(), clientEP.getPort());
+            DatagramPacket packet = new DatagramPacket(packetData, packetData.length, clientEP.getAddress(),
+                    clientEP.getPort());
             udpSocket.send(packet);
         } catch (Exception e) {
             e.printStackTrace();
+            System.out.println("packet send failed");
         }
     }
 
@@ -181,7 +182,7 @@ public class UpdServer {
                 currentIdx += 4;
             }
 
-            int ProtocallVersion = ByteBuffer.wrap(msg, currentIdx, 2).getShort();
+            int ProtocolVersion = ByteBuffer.wrap(msg, currentIdx, 2).getShort();
             currentIdx += 2;
 
             int packetSize = ByteBuffer.wrap(msg, currentIdx, 2).getShort();
@@ -238,6 +239,7 @@ public class UpdServer {
                 outputData[outIdx++] = 0;
 
                 SendPacket(clientEP, outputData, (short) 1001);
+
             } else if (messageType == MessageType.DSUC_ListPorts.getValue()) {
                 int numPadRequest = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
                 currentIdx += 4;
@@ -255,6 +257,7 @@ public class UpdServer {
                 }
 
                 byte[] outputData = new byte[16];
+
                 for (byte i = 0; i < numPadRequest; i++) {
                     byte currentRequest = msg[requestIdx + i];
                     Controller controller = controllerManager.getPlayer(i);
@@ -271,11 +274,11 @@ public class UpdServer {
                     outputData[outIdx++] = (byte) controller.model;
                     outputData[outIdx++] = (byte) controller.connection;
 
-                    byte[] adressByte = controller.PadMacAdress;
+                    byte[] addressByte = controller.PadMacAddress.mac;
 
-                    if (adressByte.length == 6) {
+                    if (addressByte.length == 6) {
                         for (int j = 0; j < 6; j++) {
-                            outputData[outIdx++] = adressByte[j];
+                            outputData[outIdx++] = addressByte[j];
                         }
                     } else {
                         for (int j = 0; j < 6; j++) {
@@ -298,7 +301,8 @@ public class UpdServer {
                 currentIdx += macBytes.length;
                 macToReg = new PhysicalAddress(macBytes);
 
-                // this is junkey and I need to check to make shure it dose what I think
+                // TODO: Make sure the flags work with my remotes and are necessary
+                // this is junky and I need to check to make sure it dose what I think
                 // it dose
                 synchronized (clients) {
                     if (clients.containsKey(clientEP)) {
@@ -316,10 +320,98 @@ public class UpdServer {
         }
     }
 
-    private boolean ReportToOutputBuffer(Controller controller, byte[] outputData, int outIdx) {
-        
+    private byte[] outputControllerState(Controller controller, byte[] outputData, int outIdx) {
+        outputData[outIdx++] = 0;
 
-        return true;
+        if (controller.dpad.west) {
+            outputData[outIdx] |= 0x80;
+        }
+        if (controller.dpad.south) {
+            outputData[outIdx] |= 0x40;
+        }
+        if (controller.dpad.east) {
+            outputData[outIdx] |= 0x20;
+        }
+        if (controller.dpad.north) {
+            outputData[outIdx] |= 0x10;
+        }
+
+        outputData[++outIdx] = 0;
+
+        if (controller.buttons.b) {
+            outputData[outIdx] |= 0x40;
+        }
+        if (controller.buttons.a) {
+            outputData[outIdx] |= 0x20;
+        }
+
+        outputData[outIdx++] = (controller.buttons.home) ? (byte) 1 : (byte) 0;
+        outputData[outIdx++] = (byte) 0; // touchpad spot
+
+        // joysticks
+
+        outputData[outIdx++] = (controller.dpad.west) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (controller.dpad.south) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (controller.dpad.east) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (controller.dpad.north) ? (byte) 0xFF : (byte) 0;
+
+        // analog buttons
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (controller.buttons.b) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (controller.buttons.a) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (byte) 0;
+
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (byte) 0;
+
+        outIdx++;
+
+        //TODO: timestamp
+        outIdx += 8;
+
+        //TODO: accelerometer
+        outIdx += 12;
+
+        //TODO: gyroscope
+        outIdx += 12;
+
+
+        return outputData;
+    }
+
+    public void StateUpdate(Controller controller) {
+        // run is alive check on all controlers
+
+        byte outputData[] = new byte[100];
+        int outIdx = 0;
+        ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(
+                MessageType.DSUS_PadDataRsp.getValue());
+        System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
+        outIdx += 4;
+
+        outputData[outIdx++] = (byte) controller.PadId;
+        outputData[outIdx++] = (byte) controller.constants;
+        outputData[outIdx++] = (byte) controller.model;
+        outputData[outIdx++] = (byte) controller.connection;
+
+        byte[] addressByte = controller.PadMacAddress.mac;
+        for (int i = 0; i < 6; i++) {
+            outputData[outIdx++] = addressByte[i];
+        }
+
+        outputData[outIdx++] = (byte) controller.battery;
+        outputData[outIdx++] = 1;
+
+        messageTypeBytes = ByteBuffer.allocate(4).putInt(controller.packageCounter);
+        System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
+        outIdx += 4;
+
+        outputData = outputControllerState(controller, outputData, outIdx);
+
+        InetSocketAddress clientEP = (InetSocketAddress) udpSocket.getRemoteSocketAddress();
+        SendPacket(clientEP, outputData, (short) 1001);
     }
 
     private void ReceiveCallback(DatagramSocket socket) {
@@ -332,16 +424,17 @@ public class UpdServer {
         } catch (Exception e) {
         }
 
-        StartRecive();
+        StartReceive();
 
         if (msg != null) {
+            System.out.println("Received Packet, Size: " + msg.length);
             ProcessIncomingPacket(msg, clientEP);
         }
     }
 
-    private void StartRecive() {
+    private void StartReceive() {
         try {
-            InetAddress localHostEP = InetAddress.getLocalHost();
+            InetAddress localHostEP = InetAddress.getLoopbackAddress();
             DatagramPacket packet = new DatagramPacket(
                     receiveBuffer, receiveBuffer.length, localHostEP, 26760);
             udpSocket.receive(packet);
@@ -353,18 +446,18 @@ public class UpdServer {
             } catch (IOException e1) {
                 e1.printStackTrace();
             }
-            StartRecive();
+            StartReceive();
         }
     }
 
-    private byte[] BeginPacket(byte[] packetBuffer, short ProtocallVersion) {
+    private byte[] BeginPacket(byte[] packetBuffer, short ProtocalVersion) {
         int currentIdx = 0;
         packetBuffer[currentIdx++] = (byte) 'D';
         packetBuffer[currentIdx++] = (byte) 'S';
         packetBuffer[currentIdx++] = (byte) 'U';
         packetBuffer[currentIdx++] = (byte) 'S';
 
-        ByteBuffer reqProtocolVersionBytes = ByteBuffer.allocate(2).putShort(ProtocallVersion);
+        ByteBuffer reqProtocolVersionBytes = ByteBuffer.allocate(2).putShort(ProtocalVersion);
         System.arraycopy(
                 reqProtocolVersionBytes.array(), 0, packetBuffer, currentIdx, 2);
         currentIdx += 2;
@@ -384,17 +477,16 @@ public class UpdServer {
         return packetBuffer;
     }
 
-    private byte[] FinishPacket(byte[] packetBufer) {
-        Arrays.fill(
-                packetBufer, 8, 12, (byte) 0); // clear the bytes at index 8 to 11
+    private byte[] FinishPacket(byte[] packetBuffer) {
+        Arrays.fill(packetBuffer, 8, 12, (byte) 0);
 
         CRC32 crc32 = new CRC32();
-        crc32.update(packetBufer);
+        crc32.update(packetBuffer);
         long crcCalc = crc32.getValue();
 
         ByteBuffer crcBytes = ByteBuffer.allocate(4).putInt((int) crcCalc);
-        System.arraycopy(crcBytes.array(), 0, packetBufer, 8, 4);
+        System.arraycopy(crcBytes.array(), 0, packetBuffer, 8, 4);
 
-        return packetBufer;
+        return packetBuffer;
     }
 }

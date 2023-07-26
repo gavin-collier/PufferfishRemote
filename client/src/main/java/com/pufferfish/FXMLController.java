@@ -1,5 +1,6 @@
 package com.pufferfish;
 
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -12,8 +13,7 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 
-
-class UpdateObjects implements Runnable{
+class UpdateObjects implements Runnable {
     public void run() {
 
     }
@@ -24,6 +24,7 @@ public class FXMLController implements Initializable {
     String roomCode;
 
     static connectionHandler connectionHandler = new connectionHandler();
+    static UDPServer udpServer = new UDPServer(connectionHandler.controllerManager);
 
     @FXML
     public static ListView<String> playerList;
@@ -33,8 +34,8 @@ public class FXMLController implements Initializable {
 
     @FXML
     synchronized private void handleButtonAction(ActionEvent event) throws InterruptedException {
-       roomCode = generateRandomString(6);
-       
+        roomCode = generateRandomString(6);
+
         while (connectionHandler.createRoom(roomCode)) {
             roomCode = generateRandomString(6);
             wait(500);
@@ -48,7 +49,16 @@ public class FXMLController implements Initializable {
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         try {
-            connectionHandler.newConnection(new URI("ws://localhost:8080")); //https://pufferfish.onrender.com
+            connectionHandler.newConnection(new URI("ws://localhost:8080")); // https://pufferfish.onrender.com
+            try {
+                udpServer.Start(InetAddress.getLoopbackAddress());
+                System.out.println("UDP Server Started");
+            } catch (Exception e) {
+            }
+
+            // DEBUG PLAYER
+            connectionHandler.controllerManager.addPlayer(-1, new Controller("DEBUG"));
+        
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }
@@ -69,4 +79,3 @@ public class FXMLController implements Initializable {
         connectionHandler.endConnection();
     }
 }
-
