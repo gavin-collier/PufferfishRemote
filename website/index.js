@@ -105,10 +105,9 @@ io.on("connection", (socket) => {
       }
     }
   });
-  socket.on("pressButton", (button) => {
+  socket.on("updateState", (state) => {
     let room = [...socket.rooms][0];
-    console.log("button pressed: " + button + " in room: " + room);
-    socket.to(room).emit("buttonPressed", socket.id, button);
+    socket.to(room).emit("newState", socket.id, state);
   });
 });
 

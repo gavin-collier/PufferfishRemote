@@ -7,16 +7,16 @@ public class Controller {
         byte[] ip;
         byte[] port;
 
-        public PhysicalAddress(byte[] ip) {
-            this.ip = ip;
+        public PhysicalAddress(byte[] mac) {
+            this.mac = mac;
         }
 
         public PhysicalAddress() {
-            this.ip = null;
+            this.mac = null;
         }
 
         public byte[] getMac() {
-            return mac;
+            return mac; 
         }
 
         public byte[] getIp() {
@@ -60,16 +60,37 @@ public class Controller {
     int model = 2;
     int battery = -1;
     int connection = 3;
-    PhysicalAddress PadMacAddress = new PhysicalAddress(new byte[] {01, 02, 03, 04, 05, 06});
+    PhysicalAddress PadMacAddress = new PhysicalAddress(new byte[] { 01, 02, 03, 04, 05, 06 });
     public int packageCounter = 0;
-    public DPad dpad;
-    public Buttons buttons;
+    public DPad dpad = new DPad();
+    public Buttons buttons = new Buttons();
 
     public Controller(String id) {
         this.id = id;
     }
 
-    public void updateState(boolean[] data) {
+    private static boolean[] decodeInt(int encodedInt) {
+        int arrayLength = Integer.SIZE;
+        if (arrayLength <= 0) {
+            throw new IllegalArgumentException("Array length must be greater than 0.");
+        }
+
+        int[] intArray = new int[arrayLength];
+        for (int i = arrayLength - 1; i >= 0; i--) {
+            intArray[i] = encodedInt & 1;
+            encodedInt >>= 1;
+        }
+
+        boolean[] boolArray = new boolean[arrayLength];
+
+        for (int i = 0; i < intArray.length; i++) {
+            boolArray[i] = (intArray[i] == 1 ? true : false);
+        }
+        return boolArray;
+    }
+
+    public void updateState(int encodedInt) {
+        boolean[] data = decodeInt(encodedInt);
         for (int i = 0; i < data.length; i++) {
             switch (i) {
                 case 0:

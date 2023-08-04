@@ -36,9 +36,12 @@
         <br><br>
         <button type="button" id="wiiRemote">Start Wii Remote</button>
         <script>
-            document.getElementById("wiiRemote").onclick = function() {;
-                let button = 1;
-                socket.emit("pressButton", button);
+            let state = [false, false, false, false, false, false, false, false, false, false]
+            document.getElementById("wiiRemote").onclick = function() {
+                state[9] = !state[9]; //change button state (temp)
+                var binaryString = state.map((bool) => (bool ? "1" : "0")).join(""); //encode state into int
+                var encodedInt = parseInt(binaryString, 2);
+                socket.emit("updateState", encodedInt); //emit the int
             }
           </script>
     </body>

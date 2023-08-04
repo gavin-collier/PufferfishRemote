@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -130,15 +131,21 @@ public class UDPServer {
             }
             isRunning = false;
         }
+        try  {
+            DatagramChannel channel = DatagramChannel.open(null);
+            udpSocket = channel.socket();
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
+        
 
         try {
-            udpSocket = new DatagramSocket();
             udpSocket.bind(new InetSocketAddress(ip, 26760));
         } catch (SocketException e) {
             udpSocket.close();
             udpSocket = null;
-
-            System.out.println("Could not start UDP Server");
+            System.out.println("Could not start UDP Server! Error: " + e.getMessage());
             return;
         }
 
@@ -368,21 +375,20 @@ public class UDPServer {
 
         outIdx++;
 
-        //TODO: timestamp
+        // TODO: timestamp
         outIdx += 8;
 
-        //TODO: accelerometer
+        // TODO: accelerometer
         outIdx += 12;
 
-        //TODO: gyroscope
+        // TODO: gyroscope
         outIdx += 12;
-
 
         return outputData;
     }
 
     public void StateUpdate(Controller controller) {
-        // run is alive check on all controlers
+        // TODO: run is alive check on all controlers
 
         byte outputData[] = new byte[100];
         int outIdx = 0;

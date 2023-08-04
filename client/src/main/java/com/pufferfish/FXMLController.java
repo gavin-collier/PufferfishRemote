@@ -23,8 +23,9 @@ public class FXMLController implements Initializable {
 
     String roomCode;
 
-    static connectionHandler connectionHandler = new connectionHandler();
-    static UDPServer udpServer = new UDPServer(connectionHandler.controllerManager);
+    public static controllerManager controllerManager = new controllerManager();
+    static UDPServer udpServer = new UDPServer(controllerManager);
+    static connectionHandler connectionHandler = new connectionHandler(controllerManager, udpServer);
 
     @FXML
     public static ListView<String> playerList;
@@ -51,14 +52,11 @@ public class FXMLController implements Initializable {
         try {
             connectionHandler.newConnection(new URI("ws://localhost:8080")); // https://pufferfish.onrender.com
             try {
+                System.out.println("Tried to Start UDP Server!");
                 udpServer.Start(InetAddress.getLoopbackAddress());
-                System.out.println("UDP Server Started");
             } catch (Exception e) {
             }
 
-            // DEBUG PLAYER
-            connectionHandler.controllerManager.addPlayer(-1, new Controller("DEBUG"));
-        
         } catch (URISyntaxException e) {
             e.printStackTrace();
         }

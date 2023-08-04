@@ -27,8 +27,14 @@ public class connectionHandler {
             .setForceNew(true)
             .build();
 
-    public static controllerManager controllerManager = new controllerManager();
+    private controllerManager controllerManager;
+    private UDPServer udpServer;
     boolean roomEmpty = false;
+
+    public connectionHandler(controllerManager controllerManager, UDPServer udpServer){
+        this.controllerManager = controllerManager;
+        this.udpServer = udpServer;
+    }
 
     public void endConnection() {
         socket.disconnect();
@@ -62,17 +68,18 @@ public class connectionHandler {
             }
         });
 
-        socket.on("buttonPressed", new Emitter.Listener() {
+        socket.on("newState", new Emitter.Listener() {
             @Override
             public void call(Object... args) {
-                System.out.println("Button pressed event");
+                System.out.println("updateState event");
                 for (int i = 0; i < controllerManager.players.size(); i++) {
                     System.out.println("Checking player " + i);
                     System.out.println("Checking player id " + (controllerManager.getSocket(i)));
                     System.out.println("Checking socket id " + (String) args[0]);
                     if (controllerManager.getPlayer(i).getSocket().equals((String) args[0])) {
-                        System.out.println("Sending button press to player " + i);
-                        controllerManager.getPlayer(i).updateState((boolean[]) args[1]);
+                        System.out.println("Sending state to player " + i);
+                        controllerManager.getPlayer(i).updateState((int) args[1]);
+                        udpServer.StateUpdate(controllerManager.getPlayer(i));
                     }
                 
                 }
