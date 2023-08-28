@@ -16,7 +16,7 @@ public class Controller {
         }
 
         public byte[] getMac() {
-            return mac; 
+            return mac;
         }
 
         public byte[] getIp() {
@@ -56,10 +56,10 @@ public class Controller {
 
     String id;
     int PadId = 0;
-    int constants = 2;
-    int model = 2;
-    int battery = -1;
-    int connection = 3;
+    int model = 1;
+    byte battery = 0x05;
+    int connected = 0;
+    int connection = 0;
     PhysicalAddress PadMacAddress = new PhysicalAddress(new byte[] { 01, 02, 03, 04, 05, 06 });
     public int packageCounter = 0;
     public DPad dpad = new DPad();
@@ -67,6 +67,7 @@ public class Controller {
 
     public Controller(String id) {
         this.id = id;
+        connected = 2;
     }
 
     private static boolean[] decodeInt(int encodedInt) {
@@ -125,7 +126,6 @@ public class Controller {
                     break;
             }
         }
-        packageCounter++;
     }
 
     public String getSocket() {

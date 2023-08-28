@@ -17,6 +17,9 @@ public class controllerManager {
     }
 
     public Controller getPlayer(int playerNum){
+        if (playerNum > players.size() - 1){
+            return null;
+        }
         return players.get(playerNum);
     }
 

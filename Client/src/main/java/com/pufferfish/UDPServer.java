@@ -10,6 +10,7 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.DatagramChannel;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -125,20 +126,21 @@ public class UDPServer {
 
     public void Start(InetAddress ip) {
         if (isRunning) {
+            System.out.println("UDP Server is allready running!");
             if (udpSocket != null) {
                 udpSocket.close();
                 udpSocket = null;
             }
             isRunning = false;
         }
-        try  {
-            DatagramChannel channel = DatagramChannel.open(null);
+
+        try {
+            DatagramChannel channel = DatagramChannel.open();
             udpSocket = channel.socket();
         } catch (IOException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
         }
-        
 
         try {
             udpSocket.bind(new InetSocketAddress(ip, 26760));
@@ -151,10 +153,10 @@ public class UDPServer {
 
         byte[] randomBuf = new byte[4];
         new Random().nextBytes(randomBuf);
-        serverId = ByteBuffer.wrap(randomBuf, 0, 4).getInt();
+        serverId = ByteBuffer.wrap(randomBuf, 0, 4).get();
 
         isRunning = true;
-        System.out.printf("Starting server on %s:%d\r\n", ip.toString(), 26760);
+        System.out.printf("Starting server on %s:%d\r\n", udpSocket.getLocalAddress(), udpSocket.getLocalPort());
         StartReceive();
     }
 
@@ -182,25 +184,30 @@ public class UDPServer {
 
     private void ProcessIncomingPacket(byte[] msg, InetSocketAddress clientEP) {
         try {
+            ByteBuffer buffer = ByteBuffer.wrap(msg).order(ByteOrder.nativeOrder());
             int currentIdx = 0;
-            if (msg[0] != 'D' || msg[1] != 'S' || msg[2] != 'U' || msg[3] != 'C') {
-                return;
-            } else {
-                currentIdx += 4;
-            }
 
-            int ProtocolVersion = ByteBuffer.wrap(msg, currentIdx, 2).getShort();
+            if (msg[0] != 'D' || msg[1] != 'S' || msg[2] != 'U' || msg[3] != 'C') {
+                System.out.println("incorrect msg header: " + msg[0] + msg[1] + msg[2] + msg[3] + " is not valid!");
+                return;
+            }
+            currentIdx = 4;
+
+            int ProtocolVersion = buffer.getShort(currentIdx);
             currentIdx += 2;
 
-            int packetSize = ByteBuffer.wrap(msg, currentIdx, 2).getShort();
+            int packetSize = buffer.getShort(currentIdx);
             currentIdx += 2;
 
             if (packetSize < 0) {
+                System.out.println("incorrect msg header!\n" + packetSize + " is not valid size!");
                 return;
             }
 
             packetSize += 16;
             if (packetSize > msg.length) {
+                System.out.println(
+                        "incorrect msg header!\n" + packetSize + " is not valid size! + msg size: " + msg.length);
                 return;
             } else if (packetSize < msg.length) {
                 byte[] newMsg = new byte[packetSize];
@@ -208,49 +215,59 @@ public class UDPServer {
                 msg = newMsg;
             }
 
-            int crcValue = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
-            currentIdx += 4;
-            msg[currentIdx++] = (byte) 0;
-            msg[currentIdx++] = (byte) 0;
-            msg[currentIdx++] = (byte) 0;
-            msg[currentIdx++] = (byte) 0;
+            int crcValue = buffer.getInt(currentIdx);
+
+            msg[currentIdx++] = 0;
+            msg[currentIdx++] = 0;
+            msg[currentIdx++] = 0;
+            msg[currentIdx++] = 0;
 
             CRC32 crc32 = new CRC32();
             crc32.update(msg);
             long crcCalc = crc32.getValue();
+            crc32.reset();
 
             if (crcCalc != crcValue) {
+                System.out.println("incorrect msg header!\ncrcCalc: " + crcCalc + " != crcValue: " + crcValue + "!");
                 return;
             }
 
-            int clientID = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
+            int clientID = buffer.getInt(currentIdx);
             currentIdx += 4;
 
-            int messageType = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
+            int messageType = buffer.getInt(currentIdx);
             currentIdx += 4;
 
             if (messageType == MessageType.DSUC_VersionReq.getValue()) {
+                System.out.println("MSG TYPE: VersionReq: " + messageType);
+
                 byte[] outputData = new byte[8];
                 int outIdx = 0;
-                ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(
+
+                ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(
                         MessageType.DSUS_VersionRsp.getValue());
                 System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
                 outIdx += 4;
-                short MaxProtocolVersion = 1001;
-                ByteBuffer maxProtocolVersionBytes = ByteBuffer.allocate(2).putShort(MaxProtocolVersion);
-                System.arraycopy(
-                        maxProtocolVersionBytes.array(), 0, outputData, outIdx, 2);
 
+                short MaxProtocolVersion = 1001;
+                ByteBuffer maxProtocolVersionBytes = ByteBuffer.allocate(2).putShort(MaxProtocolVersion)
+                        .order(ByteOrder.nativeOrder());
+                System.arraycopy(maxProtocolVersionBytes.array(), 0, outputData, outIdx, 2);
                 outIdx += 2;
+
                 outputData[outIdx++] = 0;
                 outputData[outIdx++] = 0;
 
                 SendPacket(clientEP, outputData, (short) 1001);
 
             } else if (messageType == MessageType.DSUC_ListPorts.getValue()) {
-                int numPadRequest = ByteBuffer.wrap(msg, currentIdx, 4).getInt();
+                System.out.println("MSG TYPE: ListPorts: " + messageType);
+
+                int numPadRequest = buffer.getInt(currentIdx);
                 currentIdx += 4;
+
                 if (numPadRequest < 0 || numPadRequest > 4) {
+                    System.out.println("Invalid numPadRequest #: " + numPadRequest);
                     return;
                 }
 
@@ -269,36 +286,42 @@ public class UDPServer {
                     byte currentRequest = msg[requestIdx + i];
                     Controller controller = controllerManager.getPlayer(i);
 
-                    int outIdx = 0;
-
-                    ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(
-                            MessageType.DSUS_VersionRsp.getValue());
-                    System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
-                    outIdx += 4;
-
-                    outputData[outIdx++] = (byte) controller.PadId;
-                    outputData[outIdx++] = (byte) controller.constants;
-                    outputData[outIdx++] = (byte) controller.model;
-                    outputData[outIdx++] = (byte) controller.connection;
-
-                    byte[] addressByte = controller.PadMacAddress.mac;
-
-                    if (addressByte.length == 6) {
-                        for (int j = 0; j < 6; j++) {
-                            outputData[outIdx++] = addressByte[j];
+                    if (controller == null) {
+                        for (int j = 0; j < 12; j++) {
+                            outputData[j] = 0;
                         }
                     } else {
-                        for (int j = 0; j < 6; j++) {
-                            outputData[outIdx++] = 0;
-                        }
-                    }
+                        int outIdx = 0;
 
-                    outputData[outIdx++] = (byte) controller.battery;
-                    outputData[outIdx++] = 0;
+                        ByteBuffer outputBuffer = ByteBuffer.wrap(outputData).order(ByteOrder.nativeOrder());
+                        outputBuffer.putInt(outIdx, MessageType.DSUS_PortInfo.getValue());
+                        outputData = outputBuffer.array();
+                        outIdx += 4;
+
+                        System.out.println("Sending Controller #" + currentRequest);
+                        outputData[outIdx++] = currentRequest; // Slot
+                        outputData[outIdx++] = (byte) controller.connected; // state
+                        outputData[outIdx++] = (byte) controller.model; // gyro type
+                        outputData[outIdx++] = (byte) controller.connection; // connection type
+
+                        byte[] addressByte = controller.PadMacAddress.mac;
+                        outIdx++;
+                        System.arraycopy(addressByte, 0, outputData, outIdx, 6);
+                        outIdx += 6;
+
+                        outputData[outIdx++] = controller.battery;
+
+                        for (int j = 0; j < outputData.length; j++) {
+                            System.out.print(" " + outputData[j]);
+                        }
+                        System.out.println();
+                    }
 
                     SendPacket(clientEP, outputData, (short) 1001);
                 }
             } else if (messageType == MessageType.DSUS_PadDataRsp.getValue()) {
+                System.out.println("MSG TYPE: PadDataRsp: " + messageType);
+
                 byte regFlags = msg[currentIdx++];
                 byte idToReg = msg[currentIdx++];
                 PhysicalAddress macToReg = null;
@@ -320,14 +343,23 @@ public class UDPServer {
                         clients.put(clientEP, clientTimes);
                     }
                 }
+            } else {
+                System.out.println("Unknown MSG Type: " + messageType);
             }
 
         } catch (Exception e) {
             // TODO: handle exception
+            System.out.println("Can't Handle Packet! " + e.getMessage());
         }
     }
 
     private byte[] outputControllerState(Controller controller, byte[] outputData, int outIdx) {
+
+        ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(
+                MessageType.DSUS_PortInfo.getValue());
+        System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
+        outIdx += 4;
+
         outputData[outIdx++] = 0;
 
         if (controller.dpad.west) {
@@ -392,13 +424,13 @@ public class UDPServer {
 
         byte outputData[] = new byte[100];
         int outIdx = 0;
-        ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).putInt(
+        ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(
                 MessageType.DSUS_PadDataRsp.getValue());
         System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
         outIdx += 4;
 
         outputData[outIdx++] = (byte) controller.PadId;
-        outputData[outIdx++] = (byte) controller.constants;
+        outputData[outIdx++] = (byte) controller.connected;
         outputData[outIdx++] = (byte) controller.model;
         outputData[outIdx++] = (byte) controller.connection;
 
@@ -410,32 +442,34 @@ public class UDPServer {
         outputData[outIdx++] = (byte) controller.battery;
         outputData[outIdx++] = 1;
 
-        messageTypeBytes = ByteBuffer.allocate(4).putInt(controller.packageCounter);
+        messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(controller.packageCounter);
         System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
         outIdx += 4;
 
         outputData = outputControllerState(controller, outputData, outIdx);
 
-        InetSocketAddress clientEP = (InetSocketAddress) udpSocket.getRemoteSocketAddress();
+        InetSocketAddress clientEP = new InetSocketAddress(udpSocket.getLocalAddress(), udpSocket.getPort());
         SendPacket(clientEP, outputData, (short) 1001);
     }
 
-    private void ReceiveCallback(DatagramSocket socket) {
+    private void ReceiveCallback(DatagramPacket packet) {
         byte[] msg = null;
-        InetSocketAddress clientEP = (InetSocketAddress) socket.getRemoteSocketAddress();
+        InetSocketAddress clientEP = new InetSocketAddress(udpSocket.getLocalAddress(), udpSocket.getPort());
         try {
-            int msgLen = socket.getReceiveBufferSize();
+            int msgLen = packet.getLength();
             msg = new byte[msgLen];
-            System.arraycopy(receiveBuffer, msgLen, msg, 0, msgLen);
+            System.arraycopy(receiveBuffer, 0, msg, 0, msgLen);
         } catch (Exception e) {
+            System.out.println("Callback problem: " + e.getMessage());
+            for (int i = 0; i < receiveBuffer.length; i++) {
+                System.out.print(" " + receiveBuffer[i]);
+            }
+        }
+        if (msg != null) {
+            ProcessIncomingPacket(msg, clientEP);
         }
 
         StartReceive();
-
-        if (msg != null) {
-            System.out.println("Received Packet, Size: " + msg.length);
-            ProcessIncomingPacket(msg, clientEP);
-        }
     }
 
     private void StartReceive() {
@@ -444,8 +478,10 @@ public class UDPServer {
             DatagramPacket packet = new DatagramPacket(
                     receiveBuffer, receiveBuffer.length, localHostEP, 26760);
             udpSocket.receive(packet);
-            ReceiveCallback(udpSocket);
+            udpSocket.connect(localHostEP, packet.getPort());
+            ReceiveCallback(packet);
         } catch (IOException e) {
+            System.out.println("Failed to StartReceive: " + e.getMessage());
             try {
                 udpSocket.setOption(StandardSocketOptions.SO_BROADCAST, false);
                 udpSocket.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, false);
@@ -463,12 +499,14 @@ public class UDPServer {
         packetBuffer[currentIdx++] = (byte) 'U';
         packetBuffer[currentIdx++] = (byte) 'S';
 
-        ByteBuffer reqProtocolVersionBytes = ByteBuffer.allocate(2).putShort(ProtocalVersion);
+        ByteBuffer reqProtocolVersionBytes = ByteBuffer.allocate(2).order(ByteOrder.nativeOrder())
+                .putShort(ProtocalVersion);
         System.arraycopy(
                 reqProtocolVersionBytes.array(), 0, packetBuffer, currentIdx, 2);
         currentIdx += 2;
 
-        ByteBuffer packetLengthBytes = ByteBuffer.allocate(2).putShort((short) (packetBuffer.length - 16));
+        ByteBuffer packetLengthBytes = ByteBuffer.allocate(2).order(ByteOrder.nativeOrder())
+                .putShort((short) (packetBuffer.length - 16));
         System.arraycopy(
                 packetLengthBytes.array(), 0, packetBuffer, currentIdx, 2);
         currentIdx += 2;
@@ -476,7 +514,7 @@ public class UDPServer {
         Arrays.fill(packetBuffer, currentIdx, currentIdx + 4, (byte) 0);
         currentIdx += 4;
 
-        ByteBuffer serverIdBytes = ByteBuffer.allocate(4).putInt(serverId);
+        ByteBuffer serverIdBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(serverId);
         System.arraycopy(serverIdBytes.array(), 0, packetBuffer, currentIdx, 4);
         currentIdx += 4;
 
@@ -490,7 +528,7 @@ public class UDPServer {
         crc32.update(packetBuffer);
         long crcCalc = crc32.getValue();
 
-        ByteBuffer crcBytes = ByteBuffer.allocate(4).putInt((int) crcCalc);
+        ByteBuffer crcBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt((int) crcCalc);
         System.arraycopy(crcBytes.array(), 0, packetBuffer, 8, 4);
 
         return packetBuffer;

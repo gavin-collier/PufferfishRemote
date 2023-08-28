@@ -39,11 +39,12 @@ public class FXMLController implements Initializable {
 
         while (connectionHandler.createRoom(roomCode)) {
             roomCode = generateRandomString(6);
+            System.out.println("Room Code: " + roomCode);
             wait(500);
         }
 
         roomCodeLabel.setDisable(false);
-        roomCodeTextLabel.setDisable(false);
+        roomCodeTextLabel.setDisable(false); 
         roomCodeLabel.setText(roomCode);
     }
 
@@ -53,8 +54,14 @@ public class FXMLController implements Initializable {
             connectionHandler.newConnection(new URI("ws://localhost:8080")); // https://pufferfish.onrender.com
             try {
                 System.out.println("Tried to Start UDP Server!");
-                udpServer.Start(InetAddress.getLoopbackAddress());
+                
+                Thread asyncThread = new Thread(() -> {
+                    udpServer.Start(InetAddress.getLoopbackAddress());
+                });
+        
+                asyncThread.start();
             } catch (Exception e) {
+                System.out.println("Failed UDP Start: " + e.getMessage());
             }
 
         } catch (URISyntaxException e) {
