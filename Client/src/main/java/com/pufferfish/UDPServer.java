@@ -304,8 +304,8 @@ public class UDPServer {
                         outputData[outIdx++] = (byte) controller.model; // gyro type
                         outputData[outIdx++] = (byte) controller.connection; // connection type
 
-                        byte[] addressByte = controller.PadMacAddress.mac;
                         outIdx++;
+                        byte[] addressByte = controller.PadMacAddress.mac;
                         System.arraycopy(addressByte, 0, outputData, outIdx, 6);
                         outIdx += 6;
 
@@ -355,13 +355,6 @@ public class UDPServer {
 
     private byte[] outputControllerState(Controller controller, byte[] outputData, int outIdx) {
 
-        ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(
-                MessageType.DSUS_PortInfo.getValue());
-        System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
-        outIdx += 4;
-
-        outputData[outIdx++] = 0;
-
         if (controller.dpad.west) {
             outputData[outIdx] |= 0x80;
         }
@@ -375,7 +368,7 @@ public class UDPServer {
             outputData[outIdx] |= 0x10;
         }
 
-        outputData[++outIdx] = 0;
+        outputData[outIdx++] = 0;
 
         if (controller.buttons.b) {
             outputData[outIdx] |= 0x40;
@@ -388,33 +381,88 @@ public class UDPServer {
         outputData[outIdx++] = (byte) 0; // touchpad spot
 
         // joysticks
+        outputData[outIdx++] = 0; //left X
+        outputData[outIdx++] = 0; //left y
+        outputData[outIdx++] = 0; //right x
+        outputData[outIdx++] = 0; //right y
 
-        outputData[outIdx++] = (controller.dpad.west) ? (byte) 0xFF : (byte) 0;
-        outputData[outIdx++] = (controller.dpad.south) ? (byte) 0xFF : (byte) 0;
-        outputData[outIdx++] = (controller.dpad.east) ? (byte) 0xFF : (byte) 0;
-        outputData[outIdx++] = (controller.dpad.north) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (controller.dpad.west) ? (byte) 0xFF : (byte) 0; //dpad left
+        outputData[outIdx++] = (controller.dpad.south) ? (byte) 0xFF : (byte) 0; //dpad down
+        outputData[outIdx++] = (controller.dpad.east) ? (byte) 0xFF : (byte) 0; //dpad right
+        outputData[outIdx++] = (controller.dpad.north) ? (byte) 0xFF : (byte) 0; //dpad up
 
         // analog buttons
-        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (controller.buttons.one) ? (byte) 0xFF : (byte) 0;
         outputData[outIdx++] = (controller.buttons.b) ? (byte) 0xFF : (byte) 0;
         outputData[outIdx++] = (controller.buttons.a) ? (byte) 0xFF : (byte) 0;
+        outputData[outIdx++] = (controller.buttons.two) ? (byte) 0xFF : (byte) 0; 
+
+        outputData[outIdx++] = (byte) 0; //R1
+        outputData[outIdx++] = (byte) 0; //L1
+        outputData[outIdx++] = (byte) 0; //R2
+        outputData[outIdx++] = (byte) 0; //L2
+
+        //touch
+
+        //first touch
+        outputData[outIdx++] = (byte) 0; //is off
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (byte) 0;
+        outputData[outIdx++] = (byte) 0;
         outputData[outIdx++] = (byte) 0;
 
+        //second touch
+        outputData[outIdx++] = (byte) 0; //is off
         outputData[outIdx++] = (byte) 0;
         outputData[outIdx++] = (byte) 0;
         outputData[outIdx++] = (byte) 0;
         outputData[outIdx++] = (byte) 0;
-
-        outIdx++;
-
-        // TODO: timestamp
-        outIdx += 8;
+        outputData[outIdx++] = (byte) 0;
 
         // TODO: accelerometer
-        outIdx += 12;
+        outIdx++;
+        ByteBuffer accelerometerBuffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder());
+        accelerometerBuffer.putInt(0); //x
+        System.arraycopy(accelerometerBuffer.array(), 0, outputData, outIdx, 4);
+        accelerometerBuffer.clear();
+        outIdx += 4;
+        
+        outIdx++;
+        accelerometerBuffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder());
+        accelerometerBuffer.putInt(0); //Y
+        System.arraycopy(accelerometerBuffer.array(), 0, outputData, outIdx, 4);
+        accelerometerBuffer.clear();
+        outIdx += 4;
+
+        outIdx++;
+        accelerometerBuffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder());
+        accelerometerBuffer.putInt(0); //Z
+        System.arraycopy(accelerometerBuffer.array(), 0, outputData, outIdx, 4);
+        accelerometerBuffer.clear();
+        outIdx += 4;
 
         // TODO: gyroscope
-        outIdx += 12;
+        outIdx++;
+        ByteBuffer gyroscopeBuffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder());
+        gyroscopeBuffer.putInt(0); //pitch
+        System.arraycopy(gyroscopeBuffer.array(), 0, outputData, outIdx, 4);
+        gyroscopeBuffer.clear();
+        outIdx += 4;
+
+        outIdx++;
+        gyroscopeBuffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder());
+        gyroscopeBuffer.putInt(0); //yaw
+        System.arraycopy(gyroscopeBuffer.array(), 0, outputData, outIdx, 4);
+        gyroscopeBuffer.clear();
+        outIdx += 4;
+
+        outIdx++;
+        gyroscopeBuffer = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder());
+        gyroscopeBuffer.putInt(0); //roll
+        System.arraycopy(gyroscopeBuffer.array(), 0, outputData, outIdx, 4);
+        gyroscopeBuffer.clear();
+        outIdx += 4;
 
         return outputData;
     }
@@ -424,8 +472,9 @@ public class UDPServer {
 
         byte outputData[] = new byte[100];
         int outIdx = 0;
+
         ByteBuffer messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(
-                MessageType.DSUS_PadDataRsp.getValue());
+                MessageType.DSUS_PortInfo.getValue());
         System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
         outIdx += 4;
 
@@ -435,14 +484,13 @@ public class UDPServer {
         outputData[outIdx++] = (byte) controller.connection;
 
         byte[] addressByte = controller.PadMacAddress.mac;
-        for (int i = 0; i < 6; i++) {
-            outputData[outIdx++] = addressByte[i];
-        }
+        System.arraycopy(addressByte, 0, outputData, outIdx, 6);
+        outIdx += 6;
 
         outputData[outIdx++] = (byte) controller.battery;
         outputData[outIdx++] = 1;
 
-        messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(controller.packageCounter);
+        messageTypeBytes = ByteBuffer.allocate(4).order(ByteOrder.nativeOrder()).putInt(controller.packageCounter++);
         System.arraycopy(messageTypeBytes.array(), 0, outputData, outIdx, 4);
         outIdx += 4;
 
